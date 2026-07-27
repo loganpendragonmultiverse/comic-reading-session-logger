@@ -1,0 +1,25 @@
+# Comic Reading Session Logger
+
+[![CI](https://github.com/loganpendragonmultiverse/comic-reading-session-logger/actions/workflows/ci.yml/badge.svg)](https://github.com/loganpendragonmultiverse/comic-reading-session-logger/actions/workflows/ci.yml)
+
+Comic Reading Session Logger records issue ranges, elapsed time, interruptions, and notes in a portable local JSON file. It separates actual reading sessions from collection inventory and produces Markdown or JSON summaries.
+
+## Three-minute start
+
+```bash
+python -m pip install .
+comic-session add reading.json --id sunday-1 --date 2026-07-26 --series "Night Run" --from-issue 1 --through-issue 4 --minutes 55 --interruptions 1
+comic-session report reading.json
+```
+
+New records are validated before an atomic file replacement. Session IDs must be unique, dates use ISO `YYYY-MM-DD`, minutes must be positive, and interruptions cannot be negative.
+
+## Boundaries
+
+This is a session log, not a comic reader, collection manager, or automatic activity monitor. It never opens archives, contacts reading services, or modifies comic files. Notes stay local unless the user shares the log.
+
+## Development
+
+Requires Python 3.10 or newer. Run `python -m pip install -e ".[dev]"`, `ruff format --check .`, `ruff check .`, `pytest`, and `python -m build`.
+
+Part of the [Logan Pendragon Forge open-source collection](https://www.loganpendragonforge.com/open-source/). Licensed under the [MIT License](LICENSE).
