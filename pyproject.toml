@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "comic-reading-session-logger"
-version = "1.0.0"
+version = "1.1.0"
 description = "Record comic issue ranges, reading time, interruptions, and session notes locally."
 readme = "README.md"
 requires-python = ">=3.10"
