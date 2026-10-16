@@ -5,7 +5,7 @@ import json
 import sys
 from pathlib import Path
 
-from .core import add_session, load_log, render_markdown, save_log, summary
+from .core import add_session, filter_log, load_log, render_markdown, save_log, summary
 
 
 def parser() -> argparse.ArgumentParser:
@@ -23,6 +23,9 @@ def parser() -> argparse.ArgumentParser:
     add.add_argument("--notes")
     report = sub.add_parser("report")
     report.add_argument("log", type=Path)
+    report.add_argument("--start-date")
+    report.add_argument("--end-date")
+    report.add_argument("--series", help="Exact, case-sensitive series name")
     report.add_argument("--format", choices=("markdown", "json"), default="markdown")
     return result
 
@@ -46,9 +49,13 @@ def main(argv: list[str] | None = None) -> int:
             add_session(data, item)
             save_log(args.log, data)
             print(f"Recorded {args.id}")
-        elif args.format == "json":
-            print(json.dumps({"summary": summary(data), "sessions": data["sessions"]}, indent=2))
         else:
+            data = filter_log(
+                data, start_date=args.start_date, end_date=args.end_date, series=args.series
+            )
+        if args.command == "report" and args.format == "json":
+            print(json.dumps({"summary": summary(data), "sessions": data["sessions"]}, indent=2))
+        elif args.command == "report":
             sys.stdout.write(render_markdown(data))
     except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
         print(f"error: {exc}", file=sys.stderr)

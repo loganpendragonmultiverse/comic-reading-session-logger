@@ -33,6 +33,7 @@ def test_add_summary_and_render():
         "minutes": 42,
         "interruptions": 1,
         "series": {"Night Run": 1},
+        "per_series": {"Night Run": {"sessions": 1, "minutes": 42, "interruptions": 1}},
     }
     assert "Night Run 1–3" in render_markdown(data)
     with pytest.raises(ValueError, match="duplicate"):

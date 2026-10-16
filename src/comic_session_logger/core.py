@@ -62,10 +62,51 @@ def save_log(path: Path, data: dict[str, Any]) -> None:
     os.replace(temporary, path)
 
 
+def filter_log(
+    data: dict[str, Any],
+    *,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    series: str | None = None,
+) -> dict[str, Any]:
+    """Return a report view without changing the log or its session records."""
+
+    def boundary(value: str | None) -> date | None:
+        if value is None:
+            return None
+        parsed = date.fromisoformat(value)
+        if parsed.isoformat() != value:
+            raise ValueError("report dates must use YYYY-MM-DD")
+        return parsed
+
+    start, end = boundary(start_date), boundary(end_date)
+    if start is not None and end is not None and start > end:
+        raise ValueError("start date must not be after end date")
+    return {
+        **data,
+        "sessions": [
+            item
+            for item in data["sessions"]
+            if (start is None or date.fromisoformat(item["date"]) >= start)
+            and (end is None or date.fromisoformat(item["date"]) <= end)
+            and (series is None or item["series"] == series)
+        ],
+    }
+
+
 def summary(data: dict[str, Any]) -> dict[str, Any]:
     sessions = data["sessions"]
     per_series = Counter(item["series"] for item in sessions)
+    per_series_totals: dict[str, dict[str, int]] = {}
+    for item in sessions:
+        totals = per_series_totals.setdefault(
+            item["series"], {"sessions": 0, "minutes": 0, "interruptions": 0}
+        )
+        totals["sessions"] += 1
+        totals["minutes"] += item["minutes"]
+        totals["interruptions"] += item.get("interruptions", 0)
     return {
+        "per_series": dict(sorted(per_series_totals.items())),
         "sessions": len(sessions),
         "minutes": sum(item["minutes"] for item in sessions),
         "interruptions": sum(item.get("interruptions", 0) for item in sessions),
@@ -81,6 +122,11 @@ def render_markdown(data: dict[str, Any]) -> str:
         f"Sessions: **{totals['sessions']}** · Minutes: **{totals['minutes']}** · Interruptions: **{totals['interruptions']}**",
         "",
     ]
+    for series, values in totals["per_series"].items():
+        lines.append(
+            f"- **{series}**: {values['sessions']} sessions, {values['minutes']} minutes, {values['interruptions']} interruptions"
+        )
+    lines.append("")
     for item in reversed(data["sessions"]):
         lines.append(
             f"- **{item['date']} — {item['series']} {item['issue_start']}–{item['issue_end']}**: "
