@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from .core import add_session, filter_log, load_log, render_markdown, save_log, summary
+from .output import write_stdout
 
 
 def parser() -> argparse.ArgumentParser:
@@ -48,15 +49,18 @@ def main(argv: list[str] | None = None) -> int:
                 item["notes"] = args.notes
             add_session(data, item)
             save_log(args.log, data)
-            print(f"Recorded {args.id}")
+            write_stdout(f"Recorded {args.id}\n")
         else:
             data = filter_log(
                 data, start_date=args.start_date, end_date=args.end_date, series=args.series
             )
         if args.command == "report" and args.format == "json":
-            print(json.dumps({"summary": summary(data), "sessions": data["sessions"]}, indent=2))
+            write_stdout(
+                json.dumps({"summary": summary(data), "sessions": data["sessions"]}, indent=2)
+                + "\n"
+            )
         elif args.command == "report":
-            sys.stdout.write(render_markdown(data))
+            write_stdout(render_markdown(data))
     except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

@@ -31,3 +31,20 @@ Report filters `--start-date` and `--end-date` accept inclusive YYYY-MM-DD bound
 ```bash
 comic-session report reading.json --start-date 2026-07-01 --end-date 2026-07-31 --series "Night Run"
 ```
+
+## Log validation and writes
+
+Dates must be canonical YYYY-MM-DD, counts must be integers (booleans are not
+counts), and optional notes must be text. Issue labels remain authored strings:
+annuals, decimals and ranges are not inferred or reordered. Missing logs start
+empty; add creates a log and report shows an empty summary.
+
+Log saves use unique temporary files beside the log and replace the destination
+only after writing succeeds. Symlink log destinations are refused. Use one writer
+at a time: this is not a concurrent database or a power-loss durability guarantee.
+A failed stdout confirmation after add does not undo the recorded session; inspect
+the log before retrying. Closed output pipes and invalid inputs return exit status 2.
+
+Install a downloaded release wheel with python -m pip install ./PACKAGE.whl,
+replacing the filename with the actual wheel name. Handoff documents are included
+under share/comic-reading-session-logger/ in the installation prefix.
