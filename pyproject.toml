@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "comic-reading-session-logger"
-version = "1.1.0"
+version = "1.1.1"
 description = "Record comic issue ranges, reading time, interruptions, and session notes locally."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -31,3 +31,7 @@ omit = ["src/*/__main__.py"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--cov=comic_session_logger --cov-branch --cov-report=term-missing --cov-fail-under=90"
+
+[tool.setuptools.data-files]
+"share/comic-reading-session-logger" = ["README.md", "DEVELOPMENT.md", "TESTING.md", "CHANGELOG.md", "LICENSE", "CONTRIBUTING.md"]
+"share/comic-reading-session-logger/examples" = ["examples/sessions.json"]

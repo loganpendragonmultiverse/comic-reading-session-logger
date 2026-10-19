@@ -1,11 +1,26 @@
 # Testing
 
-Run `python -m pip install -e ".[dev]"`, `ruff format --check .`, `ruff check .`, `pytest`, and `python -m build`.
-
-## 1.1.0: Filtered reports
-
-Report filters `--start-date` and `--end-date` accept inclusive YYYY-MM-DD boundaries; reversed ranges fail. `--series` matches an exact case-sensitive series name. Filters combine, retain distinct session IDs, and never rewrite the log. JSON summaries retain the `series` session counts and add `per_series` with sessions, minutes and interruptions. Markdown includes the same totals. Empty selections produce zero totals.
+Requires Python 3.10+. From a clean checkout:
 
 ```bash
-comic-session report reading.json --start-date 2026-07-01 --end-date 2026-07-31 --series "Night Run"
+python -m pip install -e ".[dev]"
+ruff format --check .
+ruff check .
+pytest
+python -m build
 ```
+
+The existing 90% branch-aware coverage floor is retained. CI runs Python 3.10 and
+3.14 on Linux, Windows and macOS. Keep CodeQL and all protected checks required.
+Exercise README examples, malformed inputs, existing files, dangling report
+symlinks, closed stdout, and preservation of source fixtures. Install both the
+tag-built wheel and source distribution in isolation and run the suite plus real
+entrypoint flows away from the source tree. Run pip check. Reports and documents
+must match tagged sources. Tests use synthetic data only.
+
+- Use unique temporary files for log replacement, preserving unrelated temporary files and refusing symlink log destinations.
+- Reject boolean counts, noncanonical dates and non-text notes; keep authored Markdown fields literal and handle closed pipes cleanly.
+
+Manual screen-reader and physical-device acceptance are not implied by automated
+tests. Folder HTML needs desktop and narrow-viewport browser checks. No full WCAG
+certification or guarantee against concurrent filesystem mutations is claimed.

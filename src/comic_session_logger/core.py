@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import html
 import json
 import os
+import re
+import tempfile
 from collections import Counter
 from datetime import date
 from pathlib import Path
@@ -16,7 +19,7 @@ def load_log(path: Path) -> dict[str, Any]:
     if not path.exists():
         return empty_log()
     data = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(data, dict) or data.get("version") != 1:
+    if not isinstance(data, dict) or type(data.get("version")) is not int or data["version"] != 1:
         raise ValueError("log must be a version 1 object")
     sessions = data.get("sessions")
     if not isinstance(sessions, list):
@@ -37,15 +40,19 @@ def validate_session(item: Any, existing_ids: set[str] | None = None) -> None:
     if existing_ids and item["id"] in existing_ids:
         raise ValueError(f"duplicate session id: {item['id']}")
     try:
-        date.fromisoformat(item["date"])
+        if date.fromisoformat(item["date"]).isoformat() != item["date"]:
+            raise ValueError("noncanonical date")
     except ValueError as exc:
         raise ValueError("session date must use YYYY-MM-DD") from exc
     minutes = item.get("minutes")
     interruptions = item.get("interruptions", 0)
-    if not isinstance(minutes, int) or minutes <= 0:
+    if type(minutes) is not int or minutes <= 0:
         raise ValueError("minutes must be a positive integer")
-    if not isinstance(interruptions, int) or interruptions < 0:
+    if type(interruptions) is not int or interruptions < 0:
         raise ValueError("interruptions must be a non-negative integer")
+
+    if "notes" in item and not isinstance(item["notes"], str):
+        raise ValueError("notes must be a string")
 
 
 def add_session(data: dict[str, Any], session: dict[str, Any]) -> None:
@@ -57,9 +64,25 @@ def add_session(data: dict[str, Any], session: dict[str, Any]) -> None:
 
 def save_log(path: Path, data: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(f".{path.name}.tmp")
-    temporary.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    os.replace(temporary, path)
+    if path.is_symlink():
+        raise ValueError("log must not be a symlink")
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            newline="",
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            dir=path.parent,
+            delete=False,
+        ) as stream:
+            temporary = Path(stream.name)
+            stream.write(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None and temporary.exists():
+            temporary.unlink()
 
 
 def filter_log(
@@ -114,6 +137,12 @@ def summary(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _literal(value: Any) -> str:
+    text = re.sub(r"([\\*_{}\[\]()#+!|~-])", r"\\\1", str(value))
+    text = html.escape(text, quote=False)
+    return text.replace("\r", "&#13;").replace("\n", "&#10;").replace(chr(96), "&#96;")
+
+
 def render_markdown(data: dict[str, Any]) -> str:
     totals = summary(data)
     lines = [
@@ -124,14 +153,14 @@ def render_markdown(data: dict[str, Any]) -> str:
     ]
     for series, values in totals["per_series"].items():
         lines.append(
-            f"- **{series}**: {values['sessions']} sessions, {values['minutes']} minutes, {values['interruptions']} interruptions"
+            f"- **{_literal(series)}**: {values['sessions']} sessions, {values['minutes']} minutes, {values['interruptions']} interruptions"
         )
     lines.append("")
     for item in reversed(data["sessions"]):
         lines.append(
-            f"- **{item['date']} — {item['series']} {item['issue_start']}–{item['issue_end']}**: "
+            f"- **{_literal(item['date'])} — {_literal(item['series'])} {_literal(item['issue_start'])}–{_literal(item['issue_end'])}**: "
             f"{item['minutes']} minutes, {item.get('interruptions', 0)} interruptions"
         )
         if item.get("notes"):
-            lines.append(f"  - {item['notes']}")
+            lines.append(f"  - {_literal(item['notes'])}")
     return "\n".join(lines).rstrip() + "\n"
